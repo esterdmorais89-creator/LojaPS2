@@ -2,6 +2,7 @@
 #include <sifrpc.h>
 #include <debug.h>
 #include <libpad.h>
+#include <loadfile.h> // <-- Esta é a biblioteca que faltava para corrigir o erro!
 
 static char padBuf[256] __attribute__((aligned(64)));
 
