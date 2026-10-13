@@ -2,109 +2,95 @@
 #include <sifrpc.h>
 #include <debug.h>
 #include <libpad.h>
-#include <loadfile.h>
-
-// Códigos de cor
-#define COR_VERMELHA "\033[31m"
-#define COR_VERDE "\033[32m"
-#define COR_AMARELA "\033[33m"
-#define COR_RESET "\033[0m"
 
 static char padBuf[256] __attribute__((aligned(64)));
 
 int main(int argc, char *argv[])
 {
+    // Inicialização do sistema e comando
     SifInitRpc(0);
     SifLoadModule("rom0:SIO2MAN", 0, NULL);
     SifLoadModule("rom0:PADMAN", 0, NULL);
 
     init_scr();
-    scr_clear();
     padInit(0);
     padPortOpen(0, 0, padBuf);
 
-    scr_printf("==================================================\n");
-    scr_printf("                 GOD STIX STORE                   \n");
-    scr_printf("==================================================\n\n");
-
-    scr_printf(" Escolha o seu idioma / Choose your language:\n\n");
-    scr_printf(" [X] Portugues\n");
-    scr_printf(" [O] English\n");
+    // Lista de jogos disponíveis na nossa loja
+    char *jogos[] = {
+        "God of War II",
+        "Grand Theft Auto: San Andreas",
+        "Black",
+        "Need for Speed: Underground 2",
+        "Resident Evil 4"};
+    int total_jogos = 5;
+    int cursor = 0; // Vai dizer qual é o jogo selecionado (0 a 4)
 
     struct padButtonStatus buttons;
     int new_pad;
-    int idioma_escolhido = 0; // 1 = PT, 2 = EN
 
-    // 1. Menu de Idioma
+    // Loop principal da loja
     while (1)
     {
+        // 1. Limpa o ecrã para atualizar a posição da seta
+        scr_clear();
+
+        // 2. Desenha o cabeçalho
+        scr_printf("==================================================\n");
+        scr_printf("                 GOD STIX STORE                   \n");
+        scr_printf("==================================================\n\n");
+        scr_printf(" Selecione um jogo para baixar (Setas Cima/Baixo):\n\n");
+
+        // 3. Desenha a lista de jogos
+        for (int i = 0; i < total_jogos; i++)
+        {
+            if (i == cursor)
+            {
+                // Se o cursor estiver neste jogo, desenha uma seta a apontar
+                scr_printf("  -> [ %s ] <-\n", jogos[i]);
+            }
+            else
+            {
+                // Jogos normais
+                scr_printf("     %s\n", jogos[i]);
+            }
+        }
+
+        scr_printf("\n Pressione [X] para confirmar\n");
+
+        // Pausa muito rápida para o ecrã não piscar e os botões não ficarem loucos
+        for (int delay = 0; delay < 5000000; delay++)
+            asm("nop");
+
+        // 4. Lê os botões do comando
         int state = padGetState(0, 0);
         if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
         {
             padRead(0, 0, &buttons);
             new_pad = 0xffff ^ buttons.btns;
 
+            if (new_pad & PAD_UP)
+            { // Seta para cima
+                cursor--;
+                if (cursor < 0)
+                    cursor = total_jogos - 1; // Se passar do topo, vai para o fundo
+            }
+            if (new_pad & PAD_DOWN)
+            { // Seta para baixo
+                cursor++;
+                if (cursor >= total_jogos)
+                    cursor = 0; // Se passar do fundo, volta ao topo
+            }
             if (new_pad & PAD_CROSS)
-            {
-                scr_printf("\n  [+] Idioma: PORTUGUES\n");
-                idioma_escolhido = 1;
-                break;
-            }
-            if (new_pad & PAD_CIRCLE)
-            {
-                scr_printf("\n  [+] Language: ENGLISH\n");
-                idioma_escolhido = 2;
-                break;
+            { // Botão X
+                scr_clear();
+                scr_printf("\n\n  [+] A preparar o download de:\n      %s\n", jogos[cursor]);
+                break; // Sai do menu para a fase de "download"
             }
         }
     }
 
-    // Pausa rápida para não ler o botão duas vezes seguidas acidentalmente
-    int delay = 10000000;
-    while (delay--)
-        asm("nop");
-
-    // 2. Menu de Cores adaptado ao idioma
-    scr_printf("\n==================================================\n");
-    if (idioma_escolhido == 1)
-    {
-        scr_printf(" Escolha a cor do sistema:\n\n");
-        scr_printf(" [Triangulo] Verde\n [Quadrado] Amarelo\n [R1] Vermelho\n");
-    }
-    else
-    {
-        scr_printf(" Choose system color:\n\n");
-        scr_printf(" [Triangle] Green\n [Square] Yellow\n [R1] Red\n");
-    }
-
-    // 3. Aguarda a escolha da cor
-    while (1)
-    {
-        int state = padGetState(0, 0);
-        if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
-        {
-            padRead(0, 0, &buttons);
-            new_pad = 0xffff ^ buttons.btns;
-
-            if (new_pad & PAD_TRIANGLE)
-            {
-                scr_printf(COR_VERDE "\n  [+] Loja Iniciada! (Verde)\n" COR_RESET);
-                break;
-            }
-            if (new_pad & PAD_SQUARE)
-            {
-                scr_printf(COR_AMARELA "\n  [+] Loja Iniciada! (Amarelo)\n" COR_RESET);
-                break;
-            }
-            if (new_pad & PAD_R1)
-            {
-                scr_printf(COR_VERMELHA "\n  [+] Loja Iniciada! (Vermelho)\n" COR_RESET);
-                break;
-            }
-        }
-    }
-
-    // Loop final
+    // Loop final depois de escolher o jogo
     while (1)
     {
     }
