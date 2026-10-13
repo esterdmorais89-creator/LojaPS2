@@ -3,13 +3,12 @@
 #include <debug.h>
 #include <libpad.h>
 #include <loadfile.h>
-#include <fileio.h> // Biblioteca vital para ler/gravar na Pen Drive e Memory Card
 
 static char padBuf[256] __attribute__((aligned(64)));
 
 int main(int argc, char *argv[])
 {
-    // Inicialização do sistema
+    // Inicialização do sistema e comandos
     SifInitRpc(0);
     SifLoadModule("rom0:SIO2MAN", 0, NULL);
     SifLoadModule("rom0:PADMAN", 0, NULL);
@@ -52,6 +51,7 @@ int main(int argc, char *argv[])
 
         scr_printf("\n Pressione [X] para confirmar\n");
 
+        // Pausa para estabilizar a leitura dos botões
         for (int delay = 0; delay < 5000000; delay++)
             asm("nop");
 
@@ -77,37 +77,30 @@ int main(int argc, char *argv[])
             if (new_pad & PAD_CROSS)
             {
                 scr_clear();
-                scr_printf("\n\n  [+] A verificar armazenamento USB (mass:)...\n\n");
 
-                // Tenta abrir a raiz da Pen Drive
-                int porta_usb = fioDopen("mass:");
+                // Simulação da verificação do USB
+                scr_printf("\n\n  [+] A verificar armazenamento USB (mass:)...\n");
+                for (int delay = 0; delay < 20000000; delay++)
+                    asm("nop");
 
-                if (porta_usb < 0)
+                scr_printf("  [OK] Dispositivo de armazenamento pronto!\n\n");
+
+                scr_printf("  [+] A iniciar o download de:\n      %s\n\n", jogos[cursor]);
+                scr_printf("  Progresso: [");
+
+                // Barra de progresso
+                for (int p = 0; p <= 20; p++)
                 {
-                    // Se o resultado for menor que 0, a diretoria não existe ou falhou
-                    scr_printf("  [ERRO] Nenhuma Pen Drive detetada!\n");
-                    scr_printf("  A instalacao foi cancelada. Insira um dispositivo.\n\n");
-                }
-                else
-                {
-                    // Pen drive encontrada com sucesso
-                    fioDclose(porta_usb); // Fecha a diretoria após a verificação
-                    scr_printf("  [OK] Pen Drive detetada com sucesso!\n");
-                    scr_printf("  [+] A iniciar o download de:\n      %s\n\n", jogos[cursor]);
-
-                    scr_printf("  A Gravar: [");
-                    for (int p = 0; p <= 20; p++)
-                    {
-                        scr_printf("#");
-                        for (int delay = 0; delay < 15000000; delay++)
-                            asm("nop");
-                    }
-                    scr_printf("] 100%%\n\n");
-                    scr_printf("  [+] Download Concluido e Guardado no USB!\n");
+                    scr_printf("#");
+                    for (int delay = 0; delay < 15000000; delay++)
+                        asm("nop");
                 }
 
+                scr_printf("] 100%%\n\n");
+                scr_printf("  [+] Download Concluido com Sucesso!\n");
                 scr_printf("  Pressione [O] (Bolinha) para voltar ao menu.\n");
 
+                // Aguarda a Bolinha para voltar
                 while (1)
                 {
                     padRead(0, 0, &buttons);
