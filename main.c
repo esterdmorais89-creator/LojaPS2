@@ -4,23 +4,22 @@
 #include <libpad.h>
 #include <loadfile.h>
 
-// Espaço de memória obrigatório para o comando funcionar
+// Códigos de cor
+#define COR_VERMELHA "\033[31m"
+#define COR_VERDE "\033[32m"
+#define COR_AMARELA "\033[33m"
+#define COR_RESET "\033[0m"
+
 static char padBuf[256] __attribute__((aligned(64)));
 
 int main(int argc, char *argv[])
 {
-    // 1. Inicializa o sistema base
     SifInitRpc(0);
-
-    // 2. Carrega os drivers do comando (diretamente da BIOS da PS2)
     SifLoadModule("rom0:SIO2MAN", 0, NULL);
     SifLoadModule("rom0:PADMAN", 0, NULL);
 
-    // 3. Prepara o ecrã
     init_scr();
     scr_clear();
-
-    // 4. Liga o comando na Porta 1
     padInit(0);
     padPortOpen(0, 0, padBuf);
 
@@ -29,40 +28,83 @@ int main(int argc, char *argv[])
     scr_printf("==================================================\n\n");
 
     scr_printf(" Escolha o seu idioma / Choose your language:\n\n");
-    scr_printf(" Pressione [X] para Portugues\n");
-    scr_printf(" Pressione [O] para English\n");
+    scr_printf(" [X] Portugues\n");
+    scr_printf(" [O] English\n");
 
     struct padButtonStatus buttons;
     int new_pad;
+    int idioma_escolhido = 0; // 1 = PT, 2 = EN
 
-    // 5. Loop que fica à espera que carregues num botão
+    // 1. Menu de Idioma
     while (1)
     {
         int state = padGetState(0, 0);
-
-        // Verifica se o comando está pronto para ser lido
         if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
         {
             padRead(0, 0, &buttons);
-            new_pad = 0xffff ^ buttons.btns; // Inverte os bits para facilitar a leitura
+            new_pad = 0xffff ^ buttons.btns;
 
             if (new_pad & PAD_CROSS)
-            { // Se carregar no X
-                scr_printf("\n  [+] Idioma definido para: PORTUGUES\n");
-                break; // Sai deste loop para ir para a próxima etapa
+            {
+                scr_printf("\n  [+] Idioma: PORTUGUES\n");
+                idioma_escolhido = 1;
+                break;
             }
             if (new_pad & PAD_CIRCLE)
-            { // Se carregar na Bolinha
-                scr_printf("\n  [+] Language set to: ENGLISH\n");
-                break; // Sai deste loop para ir para a próxima etapa
+            {
+                scr_printf("\n  [+] Language: ENGLISH\n");
+                idioma_escolhido = 2;
+                break;
             }
         }
     }
 
-    // O código só chega aqui depois de escolheres o idioma!
-    scr_printf("\n A preparar o menu de cores...\n");
+    // Pausa rápida para não ler o botão duas vezes seguidas acidentalmente
+    int delay = 10000000;
+    while (delay--)
+        asm("nop");
 
-    // Loop infinito final para segurar o ecrã
+    // 2. Menu de Cores adaptado ao idioma
+    scr_printf("\n==================================================\n");
+    if (idioma_escolhido == 1)
+    {
+        scr_printf(" Escolha a cor do sistema:\n\n");
+        scr_printf(" [Triangulo] Verde\n [Quadrado] Amarelo\n [R1] Vermelho\n");
+    }
+    else
+    {
+        scr_printf(" Choose system color:\n\n");
+        scr_printf(" [Triangle] Green\n [Square] Yellow\n [R1] Red\n");
+    }
+
+    // 3. Aguarda a escolha da cor
+    while (1)
+    {
+        int state = padGetState(0, 0);
+        if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
+        {
+            padRead(0, 0, &buttons);
+            new_pad = 0xffff ^ buttons.btns;
+
+            if (new_pad & PAD_TRIANGLE)
+            {
+                scr_printf(COR_VERDE "\n  [+] Loja Iniciada! (Verde)\n" COR_RESET);
+                break;
+            }
+            if (new_pad & PAD_SQUARE)
+            {
+                scr_printf(COR_AMARELA "\n  [+] Loja Iniciada! (Amarelo)\n" COR_RESET);
+                break;
+            }
+            if (new_pad & PAD_R1)
+            {
+                scr_printf(COR_VERMELHA "\n  [+] Loja Iniciada! (Vermelho)\n" COR_RESET);
+                break;
+            }
+        }
+    }
+
+    // Loop final
     while (1)
     {
     }
