@@ -12,7 +12,9 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Compilar o código
-      run: make
+      run: |
+        apk add --no-cache make
+        make
       
     - name: Salvar o arquivo ELF
       uses: actions/upload-artifact@v4
