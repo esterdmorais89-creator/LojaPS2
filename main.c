@@ -1,6 +1,5 @@
 #include <tamtypes.h>
 #include <sifrpc.h>
-#include <libpad.h>
 #include <gsKit.h>
 #include <dmaKit.h>
 
@@ -16,7 +15,7 @@ int main(int argc, char *argv[])
     // 3. Inicializa a Placa Gráfica da PS2 (GS)
     GSGLOBAL *gsGlobal = gsKit_init_global();
 
-    // Configura a resolução para a TV normal (PAL/NTSC)
+    // Configura a resolução para a TV
     gsGlobal->Mode = gsKit_check_rom();
     if (gsGlobal->Mode == GS_MODE_PAL)
     {
@@ -30,16 +29,22 @@ int main(int argc, char *argv[])
     gsKit_init_screen(gsGlobal);
     gsKit_mode_switch(gsGlobal, GS_ONESHOT);
 
-    // 4. Define as cores reais (Formato: R, G, B, Transparência)
-    u64 CorFundo = GS_SETREG_RGBAQ(20, 30, 50, 0x00, 0x00); // Azul Escuro
+    // 4. Define as nossas cores (R, G, B, Transparência)
+    u64 CorFundo = GS_SETREG_RGBAQ(20, 30, 50, 0x00, 0x00);   // Azul Escuro (Fundo)
+    u64 CorHeader = GS_SETREG_RGBAQ(200, 30, 30, 0x00, 0x00); // Vermelho (Barra do topo)
+    u64 CorMenu = GS_SETREG_RGBAQ(40, 60, 90, 0x00, 0x00);    // Azul Claro (Caixa dos jogos)
 
     // 5. Loop principal de desenho gráfico
     while (1)
     {
-        // Limpa o ecrã com a nossa cor de fundo
+        // Limpa o ecrã com a cor de fundo
         gsKit_clear(gsGlobal, CorFundo);
 
-        // Aqui dentro é onde vamos desenhar imagens, botões e listas no futuro!
+        // Desenha a barra vermelha no topo (X inicial, Y inicial, X final, Y final, Z, Cor)
+        gsKit_prim_sprite(gsGlobal, 0, 0, 640, 70, 0, CorHeader);
+
+        // Desenha a caixa central onde vai ficar a lista de jogos
+        gsKit_prim_sprite(gsGlobal, 80, 100, 560, 350, 0, CorMenu);
 
         // Envia o desenho para a TV/Emulador
         gsKit_queue_exec(gsGlobal);
