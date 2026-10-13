@@ -2,13 +2,13 @@
 #include <sifrpc.h>
 #include <debug.h>
 #include <libpad.h>
-#include <loadfile.h> // <-- Esta é a biblioteca que faltava para corrigir o erro!
+#include <loadfile.h>
 
 static char padBuf[256] __attribute__((aligned(64)));
 
 int main(int argc, char *argv[])
 {
-    // Inicialização do sistema e comando
+    // 1. Inicialização do sistema e comando
     SifInitRpc(0);
     SifLoadModule("rom0:SIO2MAN", 0, NULL);
     SifLoadModule("rom0:PADMAN", 0, NULL);
@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     padInit(0);
     padPortOpen(0, 0, padBuf);
 
-    // Lista de jogos disponíveis na nossa loja
+    // 2. Lista de jogos disponíveis na nossa loja
     char *jogos[] = {
         "God of War II",
         "Grand Theft Auto: San Andreas",
@@ -30,19 +30,19 @@ int main(int argc, char *argv[])
     struct padButtonStatus buttons;
     int new_pad;
 
-    // Loop principal da loja
+    // 3. Loop principal da loja (O menu fica aqui dentro a atualizar)
     while (1)
     {
-        // 1. Limpa o ecrã para atualizar a posição da seta
+        // Limpa o ecrã para atualizar a posição da seta
         scr_clear();
 
-        // 2. Desenha o cabeçalho
+        // Desenha o cabeçalho
         scr_printf("==================================================\n");
         scr_printf("                 GOD STIX STORE                   \n");
         scr_printf("==================================================\n\n");
         scr_printf(" Selecione um jogo para baixar (Setas Cima/Baixo):\n\n");
 
-        // 3. Desenha a lista de jogos
+        // Desenha a lista de jogos
         for (int i = 0; i < total_jogos; i++)
         {
             if (i == cursor)
@@ -52,48 +52,72 @@ int main(int argc, char *argv[])
             }
             else
             {
-                // Jogos normais
+                // Jogos normais sem seleção
                 scr_printf("     %s\n", jogos[i]);
             }
         }
 
         scr_printf("\n Pressione [X] para confirmar\n");
 
-        // Pausa muito rápida para o ecrã não piscar e os botões não ficarem loucos
+        // Pausa muito rápida para o ecrã não piscar e os botões não ficarem muito sensíveis
         for (int delay = 0; delay < 5000000; delay++)
             asm("nop");
 
-        // 4. Lê os botões do comando
+        // Lê os botões do comando
         int state = padGetState(0, 0);
         if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
         {
             padRead(0, 0, &buttons);
             new_pad = 0xffff ^ buttons.btns;
 
+            // Navegação nas setas
             if (new_pad & PAD_UP)
-            { // Seta para cima
+            {
                 cursor--;
                 if (cursor < 0)
-                    cursor = total_jogos - 1; // Se passar do topo, vai para o fundo
+                    cursor = total_jogos - 1;
             }
             if (new_pad & PAD_DOWN)
-            { // Seta para baixo
+            {
                 cursor++;
                 if (cursor >= total_jogos)
-                    cursor = 0; // Se passar do fundo, volta ao topo
+                    cursor = 0;
             }
+
+            // Quando carrega no botão X (Confirmação)
             if (new_pad & PAD_CROSS)
-            { // Botão X
+            {
                 scr_clear();
-                scr_printf("\n\n  [+] A preparar o download de:\n      %s\n", jogos[cursor]);
-                break; // Sai do menu para a fase de "download"
+                scr_printf("\n\n  [+] A iniciar o download de:\n      %s\n\n", jogos[cursor]);
+
+                scr_printf("  Progresso: [");
+
+                // Simula uma barra de progresso a encher com '#'
+                for (int p = 0; p <= 20; p++)
+                {
+                    scr_printf("#");
+
+                    // Pausa para a barra não encher instantaneamente (simula tempo de rede)
+                    for (int delay = 0; delay < 15000000; delay++)
+                        asm("nop");
+                }
+
+                scr_printf("] 100%%\n\n");
+                scr_printf("  [+] Download Concluido com Sucesso!\n");
+                scr_printf("  Pressione [O] (Bolinha) para voltar ao menu.\n");
+
+                // Fica preso aqui a aguardar que carregues na Bolinha para voltar ao menu
+                while (1)
+                {
+                    padRead(0, 0, &buttons);
+                    int bolinha_pad = 0xffff ^ buttons.btns;
+                    if (bolinha_pad & PAD_CIRCLE)
+                    {
+                        break; // Ao quebrar este pequeno loop, ele volta ao início do menu!
+                    }
+                }
             }
         }
-    }
-
-    // Loop final depois de escolher o jogo
-    while (1)
-    {
     }
 
     return 0;
