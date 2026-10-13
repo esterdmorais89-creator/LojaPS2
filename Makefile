@@ -1,6 +1,6 @@
 EE_BIN = lojaps2.elf
 EE_OBJS = main.o
-EE_LIBS = -ldebug
+EE_LIBS = -ldebug -lpad
 
 all: $(EE_BIN)
 
