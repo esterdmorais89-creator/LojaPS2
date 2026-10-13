@@ -26,29 +26,33 @@ int main(int argc, char *argv[])
     gsKit_init_screen(gsGlobal);
     gsKit_mode_switch(gsGlobal, GS_ONESHOT);
 
-    u64 CorFundo = GS_SETREG_RGBAQ(20, 30, 50, 0x00, 0x00);
-    u64 CorHeader = GS_SETREG_RGBAQ(200, 30, 30, 0x00, 0x00);
-    u64 CorMenu = GS_SETREG_RGBAQ(40, 60, 90, 0x00, 0x00);
-    u64 CorCursor = GS_SETREG_RGBAQ(220, 180, 40, 0x00, 0x00);
+    // Paleta de Cores Definitiva (Modo Escuro)
+    u64 CorFundo = GS_SETREG_RGBAQ(15, 15, 15, 0x00, 0x00);     // Fundo quase preto
+    u64 CorHeader = GS_SETREG_RGBAQ(0, 112, 204, 0x00, 0x00);   // Azul PlayStation no topo
+    u64 CorRodape = GS_SETREG_RGBAQ(30, 30, 30, 0x00, 0x00);    // Cinza escuro no rodapé
+    u64 CorCursor = GS_SETREG_RGBAQ(255, 255, 255, 0x00, 0x00); // Cursor Branco puro
 
     struct padButtonStatus buttons;
     int new_pad;
     int cursor = 0;
-    int total_jogos = 5;
+    int total_jogos = 7;
 
     while (1)
     {
         gsKit_clear(gsGlobal, CorFundo);
 
-        gsKit_prim_sprite(gsGlobal, 0, 0, 640, 70, 0, CorHeader);
-        gsKit_prim_sprite(gsGlobal, 80, 100, 560, 350, 0, CorMenu);
+        // Desenha o Cabeçalho e o Rodapé
+        gsKit_prim_sprite(gsGlobal, 0, 0, 640, 60, 0, CorHeader);
+        gsKit_prim_sprite(gsGlobal, 0, gsGlobal->Height - 40, 640, gsGlobal->Height, 0, CorRodape);
 
-        int y_inicial = 115 + (cursor * 45);
-        gsKit_prim_sprite(gsGlobal, 90, y_inicial, 550, y_inicial + 35, 0, CorCursor);
+        // Desenha o Cursor Branco na lista
+        int y_inicial = 95 + (cursor * 40);
+        gsKit_prim_sprite(gsGlobal, 30, y_inicial, 610, y_inicial + 35, 0, CorCursor);
 
         gsKit_queue_exec(gsGlobal);
         gsKit_sync_flip(gsGlobal);
 
+        // Controlos
         int state = padGetState(0, 0);
         if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
         {
@@ -69,7 +73,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        for (int delay = 0; delay < 3000000; delay++)
+        for (int delay = 0; delay < 4000000; delay++)
             asm("nop");
     }
 
