@@ -1,0 +1,21 @@
+name: Build PS2 ELF
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ps2dev/ps2dev:latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Compilar o código
+      run: make
+      
+    - name: Salvar o arquivo ELF
+      uses: actions/upload-artifact@v4
+      with:
+        name: lojaps2-elf
+        path: lojaps2.elf
