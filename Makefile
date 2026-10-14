@@ -5,8 +5,8 @@ GSKIT = $(PS2DEV)/gsKit
 EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I$(GSKIT)/include
 EE_LDFLAGS := -L$(PS2SDK)/ee/lib -L$(GSKIT)/lib
 
-# Bibliotecas gráficas limpas, sem depender da fonte com bug do servidor
-EE_LIBS = -ldebug -lpad -lgskit -ldmakit -lm
+# Adicionamos a biblioteca gsToolkit que carrega as imagens BMP nativamente!
+EE_LIBS = -ldebug -lpad -lgskit_toolkit -lgskit -ldmakit -lm
 
 all: $(EE_BIN)
 

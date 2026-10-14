@@ -4,12 +4,13 @@
 #include <libpad.h>
 #include <gsKit.h>
 #include <dmaKit.h>
+#include <gsToolkit.h> // A nova biblioteca para ler BMPs
 
 static char padBuf[256] __attribute__((aligned(64)));
 
 int main(int argc, char *argv[])
 {
-    // 1. Inicializa o Sistema e Comando
+    // 1. Inicializa o Sistema
     SifInitRpc(0);
     SifLoadModule("rom0:SIO2MAN", 0, NULL);
     SifLoadModule("rom0:PADMAN", 0, NULL);
@@ -26,99 +27,54 @@ int main(int argc, char *argv[])
     gsGlobal->Height = (gsGlobal->Mode == GS_MODE_PAL) ? 512 : 448;
 
     gsKit_init_screen(gsGlobal);
+    gsGlobal->PrimAlphaEnable = GS_SETTING_ON; // Ativa transparências para o cursor
     gsKit_mode_switch(gsGlobal, GS_ONESHOT);
 
-    // 3. PALETA DE CORES
-    u64 CorFundo = GS_SETREG_RGBAQ(170, 10, 10, 0x00, 0x00);       // Vermelho vibrante
-    u64 CorRodape = GS_SETREG_RGBAQ(110, 0, 0, 0x00, 0x00);        // Vermelho muito escuro
-    u64 CorDetalhe = GS_SETREG_RGBAQ(255, 255, 255, 0x00, 0x00);   // Branco
-    u64 CorCursor = GS_SETREG_RGBAQ(255, 215, 0, 0x00, 0x00);      // Amarelo Dourado Premium
-    u64 CorPlaceholder = GS_SETREG_RGBAQ(190, 30, 30, 0x00, 0x00); // Caixas vermelhas-claras
+    // 3. Carregar as Imagens BMP
+    GSTEXTURE tex_abertura;
+    GSTEXTURE tex_fundo;
 
-    // Cores do Adesivo
-    u64 CorPrata = GS_SETREG_RGBAQ(200, 200, 210, 0x00, 0x00); // Prateado do Adesivo
-    u64 CorAzulSony = GS_SETREG_RGBAQ(0, 50, 255, 0x00, 0x00); // Azul clássico
+    // Procura as imagens na pasta partilhada do emulador (host)
+    gsKit_texture_bmp(gsGlobal, &tex_abertura, "host:imagens/abertura.bmp");
+    gsKit_texture_bmp(gsGlobal, &tex_fundo, "host:imagens/fundo.bmp");
 
-    // --- ANIMAÇÃO DE ABERTURA (INTRO) ---
-    // Passo 1: Fundo preto com linha dourada a crescer
-    for (int step = 0; step < 120; step++)
-    {
-        gsKit_clear(gsGlobal, GS_SETREG_RGBAQ(0, 0, 0, 0x00, 0x00)); // Preto
+    // --- CENA DE ABERTURA ---
+    gsKit_clear(gsGlobal, GS_SETREG_RGBAQ(0, 0, 0, 0, 0));
+    // Desenha a imagem de abertura a ocupar o ecrã todo
+    gsKit_prim_sprite_texture(gsGlobal, &tex_abertura, 0.0f, 0.0f, 0.0f, 0.0f, 640.0f, (float)gsGlobal->Height, (float)tex_abertura.Width, (float)tex_abertura.Height, 0, GS_SETREG_RGBAQ(0x80, 0x80, 0x80, 0x80, 0x00));
+    gsKit_queue_exec(gsGlobal);
+    gsKit_sync_flip(gsGlobal);
 
-        // A linha cresce do centro para as bordas
-        int tamanho = step * 2;
-        gsKit_prim_sprite(gsGlobal, 320 - tamanho, 250, 320 + tamanho, 255, 0, CorCursor);
+    // Pausa dramática para exibir a intro
+    for (int delay = 0; delay < 20000000; delay++)
+        asm("nop");
 
-        gsKit_queue_exec(gsGlobal);
-        gsKit_sync_flip(gsGlobal);
+    // --- MENU PRINCIPAL DA LOJA ---
+    // Cursor Amarelo Dourado com alguma transparência (para se ver um pouco o fundo através dele)
+    u64 CorCursor = GS_SETREG_RGBAQ(255, 215, 0, 100, 0x00);
 
-        // Atraso para a animação não ser instantânea
-        for (int delay = 0; delay < 1500000; delay++)
-            asm("nop");
-    }
-
-    // Passo 2: Flash Branco super rápido
-    for (int flash = 0; flash < 8; flash++)
-    {
-        gsKit_clear(gsGlobal, CorDetalhe);
-        gsKit_queue_exec(gsGlobal);
-        gsKit_sync_flip(gsGlobal);
-        for (int delay = 0; delay < 2000000; delay++)
-            asm("nop");
-    }
-    // --- FIM DA ANIMAÇÃO ---
-
-    // Variáveis da Loja
     struct padButtonStatus buttons;
     int new_pad;
     int cursor = 0;
     int total_jogos = 7;
 
-    // LOOP PRINCIPAL DA LOJA
     while (1)
     {
-        gsKit_clear(gsGlobal, CorFundo);
+        gsKit_clear(gsGlobal, GS_SETREG_RGBAQ(0, 0, 0, 0, 0));
 
-        // Barras superior e inferior
-        gsKit_prim_sprite(gsGlobal, 0, 0, 640, 50, 0, CorRodape);
-        gsKit_prim_sprite(gsGlobal, 0, gsGlobal->Height - 50, 640, gsGlobal->Height, 0, CorRodape);
+        // Cola a imagem de fundo profissional (que já tem o texto escrito)
+        gsKit_prim_sprite_texture(gsGlobal, &tex_fundo, 0.0f, 0.0f, 0.0f, 0.0f, 640.0f, (float)gsGlobal->Height, (float)tex_fundo.Width, (float)tex_fundo.Height, 0, GS_SETREG_RGBAQ(0x80, 0x80, 0x80, 0x80, 0x00));
 
-        // Linhas decorativas brancas
-        gsKit_prim_sprite(gsGlobal, 0, 50, 640, 52, 0, CorDetalhe);
-        gsKit_prim_sprite(gsGlobal, 0, gsGlobal->Height - 52, 640, gsGlobal->Height - 50, 0, CorDetalhe);
+        // Desenha o Cursor Amarelo a deslizar ao lado dos nomes
+        int start_y = 75;                    // Altura onde começa o primeiro jogo na imagem
+        int y_pos = start_y + (cursor * 45); // Move 45 pixeis para baixo por cada jogo
+        // O cursor vai apenas cobrir a área do texto
+        gsKit_prim_sprite(gsGlobal, 45.0f, (float)y_pos, 600.0f, (float)(y_pos + 40), 1, CorCursor);
 
-        // --- ADESIVO "DEFAULT PS2ON / SONY" ---
-        // Desenhado no rodapé à direita
-        int h = gsGlobal->Height;
-        gsKit_prim_sprite(gsGlobal, 480, h - 45, 620, h - 5, 0, CorPrata);                           // Base prateada do adesivo
-        gsKit_prim_sprite(gsGlobal, 485, h - 40, 510, h - 10, 0, CorAzulSony);                       // Logotipo/chip Azul holográfico
-        gsKit_prim_sprite(gsGlobal, 520, h - 35, 610, h - 30, 0, GS_SETREG_RGBAQ(50, 50, 50, 0, 0)); // Linha simulando texto
-        gsKit_prim_sprite(gsGlobal, 520, h - 25, 590, h - 20, 0, GS_SETREG_RGBAQ(50, 50, 50, 0, 0)); // Linha simulando texto
-        // --------------------------------------
-
-        // Lista de Jogos (Caixas)
-        int start_y = 90;
-        for (int i = 0; i < total_jogos; i++)
-        {
-            int y_pos = start_y + (i * 45);
-
-            if (i == cursor)
-            {
-                // Caixa Selecionada (Dourada)
-                gsKit_prim_sprite(gsGlobal, 20, y_pos, 620, y_pos + 38, 0, CorCursor);
-            }
-            else
-            {
-                // Caixa Normal (Vermelho mais claro)
-                gsKit_prim_sprite(gsGlobal, 30, y_pos + 4, 610, y_pos + 34, 0, CorPlaceholder);
-            }
-        }
-
-        // Renderiza
         gsKit_queue_exec(gsGlobal);
         gsKit_sync_flip(gsGlobal);
 
-        // Controlos das Setas
+        // Lógica do Comando
         int state = padGetState(0, 0);
         if (state == PAD_STATE_STABLE || state == PAD_STATE_FINDCTP1)
         {
@@ -139,7 +95,6 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Pausa do comando
         for (int delay = 0; delay < 3500000; delay++)
             asm("nop");
     }
